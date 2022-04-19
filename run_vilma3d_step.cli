@@ -1,0 +1,90 @@
+#!/bin/tcsh -ex
+set stacksize unlimited
+#newcomp INTEL20_64
+
+##
+setenv VERSION_GMT 4.5.9
+
+setenv OMP_NUM_THREADS $3
+echo $OMP_NUM_THREADS
+
+# executable
+set x_vega = src_vilma3d_lib/vega_pism.x
+
+set btime = $1
+set etime = $2
+# Name of run to e executed
+set run = 3d_pism_coupled
+set dir_restart = restart
+
+# Name of directory where input parameters are set up
+set inp = inp_ice6g_pismant
+if (! -e $inp) then
+	echo "ERROR: input $inp does not exist"
+	exit (1)
+endif
+
+# link input directory to inp, what is the mandatory name
+if (-e inp) rm inp ; ln -s $inp inp
+
+# name of logfile where standard out of vilma is written to
+set log = 'vega.log'
+# definition of general parameters
+# 1.jmin and jmax // spectral resolution
+set jmin=0
+set jmax=170
+
+#2. time step, if 0, is read from tint // integration interval
+set dt=0
+
+#3. polynomial representation of PREM // earth structure is generated in program
+set l_prem=1
+
+#4. modified 3d viscosity (0/1/2) = (no, read, adjust) // character of lateral viscosity structure
+#set l_visc=0
+set l_visc=1
+
+#5. toroidal loading // toroidal loading is not relevvant for GIA
+set l_toro=0
+
+#6. variation of rotation // rotational variations are considered in perturbation of potential
+set l_rot=1
+
+#7. load grid type (3/2/1/0) // character of loading structure (load love numbers / grid / spectral grid / disc load
+set l_grid=2
+
+#8. =1, will stop after reading of environment // for testing, only input is read in
+set l_envi=0
+
+#9. number of timesteps, if =0, whole history // number of integration steps
+#set itimes=280
+#set itimes=100000
+set itimes=500000
+
+#10. writing out is not each 1 kyr, but epochs are defined in wepochs.inp // defines for which epochs the output fields are written
+set l_wepo=1
+
+#11. // name of restart logfile
+set rstart="$dir_restart/restart.log"
+
+
+# call of executable
+$x_vega << END >> $log
+$jmin $jmax
+$dt
+$l_prem
+$l_visc
+$l_toro
+$l_rot
+$l_grid
+$l_envi
+$itimes
+$l_wepo
+$rstart
+
+
+$btime $etime
+END
+
+rm inp
+
