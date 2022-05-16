@@ -55,11 +55,12 @@ pismoutlast='pism/results/pism_last.nc'
 pismout4vilma='pism/results/pism4vilma.nc'
 pismoutfile='pism/results/paleo.nc'
 pisminfile='pism/results/paleo_inp.nc'
+
+# PISM readable set of initial conditions at ys
 if iteration==1:
   pismstart='data/boot_16km_tw.nc'
 else:
   pismstart='data/plig_16km_it'+str(iteration-1)+'.nc'
-pismref='data/boot_16km_tw.nc'
 
 # make ice5/6G file cdo readable ################################
 icegcdo="data/ice6g/ice6g_cdo_246.nc"
@@ -67,16 +68,17 @@ timestepyr=str(int(timestep*1000))+"years"
 
 icegdt="data/ice6g/ice6g_"+timestepyr+"_2gc.nc"
 
-# save original (Bedmap2) topography as reference for added RSL changes (two time slices)
+# combination of ICE6g and Bedmap2 Antarctica (topg0.nc) on Gauss Legendre gris n128
 #ncks -A -v topo ../02_vilma_standalone/data/ice6g/bedmap2ice6g217.nc data/topo0.nc
 topoorig = "data/topo"+str(iteration-1)+".nc"
-topgpismorig = "pism/results/topg0.nc"
+topgpismorig = "pism/results/topg"+str(iteration-1)+".nc"
 
-load_hist_file = "inp_ice6g_pismant/load_hist.inp"
+# VILMA gloabal grid size and time steps, ice and ocean densities, consistent with PISM
 load_pism_file = "data/ice6g/loadh.inp"
-load_hist_init="data/ice6g/ice6g_pism_ant_100years_2gc.nc"
+
+# defines how structure is read in: resolution, load history, reference topography and initial ice distribution
+load_hist_file = "inp_ice6g_pismant/load_hist.inp"
 load_hist_init="data/ice6g/Ice0.nc"
-#load_hist_init = icegdt
 
 #########################################################################################
 ########################################################################################
@@ -92,7 +94,6 @@ def prepare():
   # pism output data
   if not os.path.exists("pism/results"):
     os.makedirs("pism/results")
-
 
   # vilma output data
   if not os.path.exists("out"):
@@ -117,32 +118,28 @@ def prepare():
     intime=str(float(int(inityear*1000.0*secperyear)))
     run("ncap2 -O -s 'time(:)={"+intime+"}' "+pisminfile+" "+pisminfile)
 
-
   # first snapshot in PISM histroy passed to VILMA
   if not os.path.exists(pismoutlast):
     run("ncks -A -v thk,mask "+pismstart+" "+pismoutlast)
     intime=str(float(int(inityear*1000.0*secperyear)))
     run("ncap2 -O -s 'time(:)={"+intime+"}' "+pismoutlast+" "+pismoutlast)
 
-
-
+  # prepare original ice load data to have equidistant time steps
   if not os.path.exists(icegdt):
     print("\nInterpolate for Ice5/6G..")
     run("cdo -P "+str(cpupertask)+" inttime,-246000-01-01,00:00:00,"+timestepyr+" "+icegcdo+" "+icegdt)
 
+  # initial bed topography in PISM
   if not os.path.exists(topgpismorig):
-    run("ncks -A -v topg "+pismref+" "+topgpismorig)
+    run("ncks -A -v topg "+pismstart+" "+topgpismorig)
     run("ncrename -v topg,topg0 "+topgpismorig)
     ##run("ncks -O -s 'time=-3878928000000' "+topgpismorig+" "+topgpismorig)
-
 
   print("\nRun PISM.. ########################################################################")
 
 
 
 def pismtovilma():
-
-        it=0
 
         btimew=str(np.around(btime,decimals=3))
         etimew=str(np.around(etime,decimals=3))
@@ -156,9 +153,7 @@ def pismtovilma():
         btimes=str(float(int(btime*1000.0*secperyear)))
         etimes=str(float(int(etime*1000.0*secperyear)))
 
-
-
-        vilma2pismgridlast="out/vilma2pism"+btimew.zfill(6)+"-"+str(it)+".nc"
+        vilma2pismgridlast="out/vilma2pism"+btimew.zfill(6)+".nc"
         if np.float(btime)!=inityear and not os.path.exists(vilma2pismgridlast):
           print("\n"+vilma2pismgridlast+" does not exits, exit iterations...")
           exit(1)
@@ -183,12 +178,12 @@ def pismtovilma():
         
         # select two snapshots from ice5g history and merge pism output
         print("\nPrepare Ice5/6G data for VILMA forcing..")
-        iceg_input="out/ice6g_"+timestepyr+etimew.zfill(6)+"-"+str(it)+".nc"
+        iceg_input="out/ice6g_"+timestepyr+etimew.zfill(6)+".nc"
         run("cdo -P "+str(cpupertask)+" selyear,"+btimeyr+","+etimeyr+" "+icegdt+" "+iceg_input)
 
         # remap from PISM (stere) grid to VILMA (gaussian) grid
         print("\nRemap PISM to Ice5/6G data..")
-        pism2vilmagrid="pism/results/pism2vilma"+etimew.zfill(6)+"-"+str(it)+".nc"
+        pism2vilmagrid="pism/results/pism2vilma"+etimew.zfill(6)+".nc"
         # FIXME: in order to save time, save remap weights!
         #run("cdo -P "+str(cpupertask)+" remapbil,"+ice5g_input+" "+pismout4vilma+" "+pism2vilmagrid)
         run("cdo -P "+str(cpupertask)+" remapbic,"+iceg_input+" "+pismout4vilma+" "+pism2vilmagrid)
@@ -212,9 +207,8 @@ def pismtovilma():
                      -a long_name,epoch,o,c,'Epoch' \
                      -a calendar,epoch,o,c,'proleptic_gregorian' "+iceg_input)
 
-
         # save initial ice thickness as reference for all VILMA runs
-        if btime==inityear:# and it==0:
+        if btime==inityear:
             run("ncks -d epoch,0 -v Ice "+load_hist_init+" out/ice6g_ref.nc")
             run("ncap2 -O -s 'epoch(:)={"+str(btime)+"}' out/ice6g_ref.nc out/ice6g_ref.nc")
             run("ncks -O --mk_rec_dmn epoch out/ice6g_ref.nc out/ice6g_ref.nc")
@@ -241,8 +235,6 @@ def pismtovilma():
 def vilmatopism():
 
 
-        it=0
-
         btimew=str(np.around(btime,decimals=3))
         etimew=str(np.around(etime,decimals=3))
 
@@ -255,9 +247,7 @@ def vilmatopism():
         btimes=str(float(int(btime*1000.0*secperyear)))
         etimes=str(float(int(etime*1000.0*secperyear)))
 
-
-
-        vilma2pismgrid="out/vilma2pism"+etimew.zfill(6)+"-"+str(it)+".nc"
+        vilma2pismgrid="out/vilma2pism"+etimew.zfill(6)+".nc"
         run("cdo -P "+str(cpupertask)+" remapbil,"+pismout4vilma+" out/rsl.nc "+vilma2pismgrid)
         #FIXME: save remap weights to speed up coupling
 
@@ -283,7 +273,7 @@ def vilmatopism():
         
         # add dbdt=(rsl-rsl_previous)/dtyr for diagnostic
         try:
-          run("ncdiff -v rsl "+pismoutfile+" pism/results/paleo"+btimew.zfill(6)+"-"+str(it)+".nc out/dbdt.nc")
+          run("ncdiff -v rsl "+pismoutfile+" pism/results/paleo"+btimew.zfill(6)+".nc out/dbdt.nc")
           #cdo sub 
         except:
           run("ncks -O -v rsl "+pismoutfile+" out/dbdt.nc") #in case of -123.0 ka BP
@@ -297,13 +287,13 @@ def vilmatopism():
 
         # make a copy of pism output file for the record, avery 100 years
         run("ncatted -O -a history,global,d,, "+pismoutfile)
-        run("mv "+pismoutfile+" pism/results/paleo"+etimew.zfill(6)+"-"+str(it)+".nc")
+        run("mv "+pismoutfile+" pism/results/paleo"+etimew.zfill(6)+".nc")
 
         run("ncatted -O -a history,global,d,, pism/results/ts_paleo.nc")
-        run("mv pism/results/ts_paleo.nc pism/results/ts_paleo"+etimew.zfill(6)+"-"+str(it)+".nc")
+        run("mv pism/results/ts_paleo.nc pism/results/ts_paleo"+etimew.zfill(6)+".nc")
 
         # make a copy of vilms rsl output file for the record
-        run("mv out/rsl.nc out/rsl"+etimew.zfill(6)+"-"+str(it)+".nc")
+        run("mv out/rsl.nc out/rsl"+etimew.zfill(6)+".nc")
 
         #end of iteration with coupling time step #########################################
 
