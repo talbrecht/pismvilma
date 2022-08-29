@@ -68,7 +68,7 @@ timestepyr=str(int(timestep*1000))+"years"
 
 icegdt="data/ice6g/ice6g_"+timestepyr+"_2gc.nc"
 
-# combination of ICE6g and Bedmap2 Antarctica (topg0.nc) on Gauss Legendre gris n128
+# combination of ICE6g and Bedmap2 Antarctica (topg0.nc) on Gauss Legendre grid n128
 #ncks -A -v topo ../02_vilma_standalone/data/ice6g/bedmap2ice6g217.nc data/topo0.nc
 topoorig = "data/topo"+str(iteration-1)+".nc"
 topgpismorig = "pism/results/topg"+str(iteration-1)+".nc"
@@ -118,7 +118,7 @@ def prepare():
     intime=str(float(int(inityear*1000.0*secperyear)))
     run("ncap2 -O -s 'time(:)={"+intime+"}' "+pisminfile+" "+pisminfile)
 
-  # first snapshot in PISM histroy passed to VILMA
+  # first snapshot in PISM history passed to VILMA
   if not os.path.exists(pismoutlast):
     run("ncks -A -v thk,mask "+pismstart+" "+pismoutlast)
     intime=str(float(int(inityear*1000.0*secperyear)))
@@ -141,6 +141,7 @@ def prepare():
 
 def pismtovilma():
 
+        # in kyr
         btimew=str(np.around(btime,decimals=3))
         etimew=str(np.around(etime,decimals=3))
 
@@ -181,7 +182,7 @@ def pismtovilma():
         iceg_input="out/ice6g_"+timestepyr+etimew.zfill(6)+".nc"
         run("cdo -P "+str(cpupertask)+" selyear,"+btimeyr+","+etimeyr+" "+icegdt+" "+iceg_input)
 
-        # remap from PISM (stere) grid to VILMA (gaussian) grid
+        # remap bicubic from PISM (stere) grid to VILMA (gaussian) grid
         print("\nRemap PISM to Ice5/6G data..")
         pism2vilmagrid="pism/results/pism2vilma"+etimew.zfill(6)+".nc"
         # FIXME: in order to save time, save remap weights!
@@ -234,7 +235,7 @@ def pismtovilma():
 
 def vilmatopism():
 
-
+        # in kyr
         btimew=str(np.around(btime,decimals=3))
         etimew=str(np.around(etime,decimals=3))
 
@@ -292,7 +293,7 @@ def vilmatopism():
         run("ncatted -O -a history,global,d,, pism/results/ts_paleo.nc")
         run("mv pism/results/ts_paleo.nc pism/results/ts_paleo"+etimew.zfill(6)+".nc")
 
-        # make a copy of vilms rsl output file for the record
+        # make a copy of vilma rsl output file for the record
         run("mv out/rsl.nc out/rsl"+etimew.zfill(6)+".nc")
 
         #end of iteration with coupling time step #########################################

@@ -44,7 +44,7 @@ export CPUS_PER_TASK=16
 # https://slurm.schedmd.com/heterogeneous_jobs.html
 ###########################################################################################
 
-# specify iteration
+# specify iteration of initial bed elevation (topg) correction
 it=1
 
 # specify coupling time steps
@@ -67,19 +67,24 @@ do
      couplingint=`echo "$timeint*1000.0" | bc -l`
      echo $btime $etime $timeint $couplingint 
 
+     # PISM
      pismstarttime=$(date +%s)
      /bin/bash run_pism_step.sh ${SLURM_NTASKS} ${couplingint} ${it} >> pism/output/out_paleo_16km.out 
      pismendtime=$(date +%s) 
 
+     # PISM2VILMA
      srun --pack-group=1 python run_coupler.py -m "pism2vilma" -t ${timeint} -ys ${btime} -ye ${etime} -it ${it} --cpupertask=${CPUS_PER_TASK}
 
+     # VILMA
      vilmastarttime=$(date +%s)
      /bin/tcsh run_vilma3d_step.cli ${btime} ${etime} ${CPUS_PER_TASK}
      vilmaendtime=$(date +%s)
 
+     # VILMA2PISM
      srun --pack-group=1 python run_coupler.py -m "vilma2pism" -t ${timeint} -ys ${btime} -ye ${etime} -it ${it} --cpupertask=${CPUS_PER_TASK}
      endstep=$(date +%s)
 
+     # write performance
      echo "STEP       $btime - $etime  kyr..."                         >> ./log-time.out
      echo "PISM       $(($pismendtime - $pismstarttime)) seconds..."   >> ./log-time.out
      echo "PISM2VILMA $(($vilmastarttime - $pismendtime))   seconds...">> ./log-time.out
@@ -88,6 +93,7 @@ do
      echo "TOTAL STEP $(($endstep - $pismstarttime)) seconds..."       >> ./log-time.out
      echo                                                              >> ./log-time.out
 
+     # check whether required inputs for next coupling step are available
      # zfill etime in output name #########
      if (( $(echo "$etime < 0.0" |bc -l) )); then
        e=$( bc <<<"$pad - $etime" )
@@ -101,7 +107,6 @@ do
        pismres="pism/results/paleo${e#?}-0.nc"
        vilmaout="out/vilma2pism${e#?}-0.nc"
      fi
-
      # check if outputfiles exist ##########
      if [ ! -f ${pismout} ]; then 
        echo "No PISM output file ${pismout}"
@@ -113,11 +118,3 @@ do
      fi
 
 done
-
-
-
-
-
-
-
-

@@ -34,9 +34,10 @@ CALV="-calving eigen_calving,thickness_calving -front_retreat_file $OKILLFILE -e
 PICO="-ocean pico -ocean_pico_file $PICOFILE -gamma_T 1.0e-5 -overturning_coeff 0.8e6 -exclude_icerises -continental_shelf_depth -2500"
 BEDDEF='-bed_def none'
 SEALEV="-sea_level constant,delta_sl -ocean_delta_SL_file $SLFILE"
-SMB="-atmosphere pik,delta_T,precip_scaling,elevation_change -atmosphere_pik era_interim_lon -atmosphere_pik_file $ORIGFILE -atmosphere_delta_T_file $DTFILE -atmosphere_precip_scaling_file $DTFILE -atmosphere_lapse_rate_file $ORIGFILE -temp_lapse_rate 8.2 -precip_adjustment scale -surface pdd"
+SMB="-atmosphere pik,delta_T,precip_scaling,elevation_change -atmosphere_pik era_interim_lon -atmosphere_pik_file $ORIGFILE -atmosphere_delta_T_file $DTFILE \
+     -atmosphere_precip_scaling_file $DTFILE -atmosphere_lapse_rate_file $ORIGFILE -temp_lapse_rate 0.0 -precip_adjustment scale -surface pdd"
 TECH='-options_left -verbose 2 -backup_interval 3.0 -allow_extrapolation'
-CONF="-config_override pism/conf/pism_config_override_pism1.2.nc"
+CONF="-config_override pism/conf/pism_config_override.nc"
 TSERIES="-ts_file $OUTFOLDER/ts_paleo.nc -ts_times $YS:yearly:$YE"
 RESULT="-o $OUTFOLDER/paleo.nc -o_size medium"
 OUTPUT="$TSERIES $RESULT"
