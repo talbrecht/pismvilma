@@ -18,7 +18,7 @@ set run = 3d_pism_coupled
 set dir_restart = restart
 
 # Name of directory where input parameters are set up
-set inp = inp_ice6g_pismant
+set inp = inp_ice6g_pism
 if (! -e $inp) then
 	echo "ERROR: input $inp does not exist"
 	exit (1)

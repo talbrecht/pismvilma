@@ -58,9 +58,9 @@ pisminfile='pism/results/paleo_inp.nc'
 
 # PISM readable set of initial conditions at ys
 if iteration==1:
-  pismstart='data/boot_16km_tw.nc'
+  pismstart='data/pism_boot.nc'
 else:
-  pismstart='data/plig_16km_it'+str(iteration-1)+'.nc'
+  pismstart='data/pism_plig_it'+str(iteration-1)+'.nc'
 
 # make ice5/6G file cdo readable ################################
 icegcdo="data/ice6g/ice6g_cdo_246.nc"
@@ -77,7 +77,7 @@ topgpismorig = "pism/results/topg"+str(iteration-1)+".nc"
 load_pism_file = "data/ice6g/loadh.inp"
 
 # defines how structure is read in: resolution, load history, reference topography and initial ice distribution
-load_hist_file = "inp_ice6g_pismant/load_hist.inp"
+load_hist_file = "inp_ice6g_pism/load_hist.inp"
 load_hist_init="data/ice6g/Ice0.nc"
 
 #########################################################################################
